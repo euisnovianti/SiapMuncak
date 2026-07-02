@@ -61,12 +61,8 @@ export default function Navbar() {
           <span>Siap<span className="accent">-</span>Muncak</span>
         </Link>
 
-        {/* Mobile menu toggle */}
-        <button className="nav-toggle" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-
-        <ul className={`nav-links ${isOpen ? 'active' : ''}`}>
+        {/* Center menu */}
+        <ul className={`nav-menu ${isOpen ? 'active' : ''}`}>
           <li>
             <Link
               to="/catalog"
@@ -90,38 +86,40 @@ export default function Navbar() {
               </Link>
             </li>
           )}
+        </ul>
 
+        {/* Right side actions */}
+        <div className={`nav-right ${isOpen ? 'active' : ''}`}>
           {session ? (
             <>
-              <li>
-                <Link
-                  to="/profile"
-                  className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  <User size={18} />
-                  {profile?.full_name || 'Profil Saya'}
-                </Link>
-              </li>
-              <li>
-                <button onClick={handleLogout} className="btn-logout">
-                  <LogOut size={18} />
-                  Keluar
-                </button>
-              </li>
-            </>
-          ) : (
-            <li>
               <Link
-                to="/auth"
-                className="btn btn-primary btn-sm btn-auth"
+                to="/profile"
+                className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
                 onClick={() => setIsOpen(false)}
               >
-                Masuk / Daftar
+                <User size={18} />
+                {profile?.full_name || 'Profil Saya'}
               </Link>
-            </li>
+              <button onClick={handleLogout} className="btn-logout">
+                <LogOut size={18} />
+                Keluar
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="btn btn-primary btn-sm btn-auth"
+              onClick={() => setIsOpen(false)}
+            >
+              Masuk / Daftar
+            </Link>
           )}
-        </ul>
+        </div>
+
+        {/* Mobile menu toggle */}
+        <button className="nav-toggle" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
       <style>{`
@@ -145,6 +143,7 @@ export default function Navbar() {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          position: relative;
         }
 
         .nav-logo {
@@ -156,6 +155,7 @@ export default function Navbar() {
           font-weight: 800;
           color: #fff;
           letter-spacing: -0.5px;
+          z-index: 10;
         }
 
         .nav-logo-icon {
@@ -168,11 +168,21 @@ export default function Navbar() {
           color: var(--color-primary);
         }
 
-        .nav-links {
+        .nav-menu {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
           display: flex;
           align-items: center;
           list-style: none;
           gap: 24px;
+        }
+
+        .nav-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          z-index: 10;
         }
 
         .nav-link {
@@ -234,6 +244,14 @@ export default function Navbar() {
           border: none;
           color: #fff;
           cursor: pointer;
+          z-index: 10;
+        }
+
+        @media (max-width: 900px) {
+          .nav-menu {
+            position: static;
+            transform: none;
+          }
         }
 
         @media (max-width: 768px) {
@@ -241,9 +259,8 @@ export default function Navbar() {
             display: block;
           }
 
-          .nav-links {
+          .nav-menu, .nav-right {
             position: fixed;
-            top: 70px;
             left: 0;
             right: 0;
             background: #0A1417;
@@ -251,16 +268,36 @@ export default function Navbar() {
             padding: 24px;
             gap: 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            transform: translateY(-150%);
             opacity: 0;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
           }
 
-          .nav-links.active {
+          .nav-menu {
+            top: 70px;
+            transform: translateY(-100%);
+            border-bottom: none;
+            padding-bottom: 0;
+          }
+
+          .nav-right {
+            top: calc(70px + 100px); /* rough estimate of menu height */
+            transform: translateY(-100%);
+          }
+
+          .nav-menu.active, .nav-right.active {
             transform: translateY(0);
             opacity: 1;
             pointer-events: auto;
+          }
+
+          .nav-menu.active {
+            z-index: 9;
+          }
+          
+          .nav-right.active {
+            z-index: 8;
+            top: 140px; /* Adjust based on actual menu items */
           }
 
           .nav-link, .btn-logout, .btn-auth {
