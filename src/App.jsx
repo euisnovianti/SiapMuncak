@@ -1,77 +1,110 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+// Layout Components
 import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import TopVendors from './components/TopVendors';
-import PopularProducts from './components/PopularProducts';
-import HowItWorks from './components/HowItWorks';
-import BookingForm from './components/BookingForm';
-import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
 
-function App() {
-  const [selectedCity, setSelectedCity] = useState('');
-  const [rentProduct, setRentProduct] = useState(null);
+// Public Pages
+import Home from './pages/Home';
+import Auth from './pages/Auth';
+import Catalog from './pages/Catalog';
+import Detail from './pages/Detail';
 
-  const handleHeroSearch = (searchData) => {
-    setSelectedCity(searchData.city);
-  };
+// Booking Checkout Flow
+import BookingSummary from './pages/Booking/BookingSummary';
+import BookingPayment from './pages/Booking/BookingPayment';
+import BookingConfirm from './pages/Booking/BookingConfirm';
 
-  const handleSelectVendorCity = (cityName) => {
-    setSelectedCity(cityName);
-    // Scroll to catalog
-    const el = document.getElementById('catalog');
-    if (el) {
-      const offset = 80;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = el.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
-  };
+// Private Pages
+import Profile from './pages/Profile';
 
-  const handleRentProduct = (product) => {
-    setRentProduct(product);
-  };
+// Admin Pages
+import AdminDashboard from './pages/Admin/Dashboard';
+import AdminVendors from './pages/Admin/Vendors';
+import AdminBookings from './pages/Admin/Bookings';
 
-  const handleBookingSuccess = () => {
-    // Reset selection after booking success
-    setRentProduct(null);
-  };
-
+export default function App() {
   return (
-    <div className="min-h-screen bg-brand-bg text-forest-950 flex flex-col antialiased">
-      {/* Navigation Menu */}
-      <Navbar />
+    <Router>
+      <div className="layout-wrapper">
+        <Navbar />
+        
+        <main className="main-content">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/catalog" element={<Catalog />} />
+            <Route path="/catalog/:id" element={<Detail />} />
 
-      {/* Main Sections */}
-      <main className="flex-grow">
-        <Hero onSearch={handleHeroSearch} />
-        
-        <TopVendors onSelectVendor={handleSelectVendorCity} />
-        
-        <PopularProducts 
-          selectedCity={selectedCity} 
-          onRentProduct={handleRentProduct} 
-        />
-        
-        <HowItWorks />
-        
-        <BookingForm 
-          prepopulatedProduct={rentProduct} 
-          onBookingSuccess={handleBookingSuccess} 
-        />
-        
-        <Testimonials />
-      </main>
+            {/* Protected Checkout Routes */}
+            <Route
+              path="/booking/:id"
+              element={
+                <ProtectedRoute allowedRoles={['user', 'vendor', 'admin']}>
+                  <BookingSummary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/booking/:id/payment"
+              element={
+                <ProtectedRoute allowedRoles={['user', 'vendor', 'admin']}>
+                  <BookingPayment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/booking/:id/confirmation"
+              element={
+                <ProtectedRoute allowedRoles={['user', 'vendor', 'admin']}>
+                  <BookingConfirm />
+                </ProtectedRoute>
+              }
+            />
 
-      {/* Footer */}
-      <Footer />
-    </div>
+            {/* Protected Profile Routes */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute allowedRoles={['user', 'vendor', 'admin']}>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/vendors"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminVendors />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/bookings"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminBookings />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </main>
+
+        <Footer />
+      </div>
+    </Router>
   );
 }
-
-export default App;

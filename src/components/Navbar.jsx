@@ -1,170 +1,274 @@
 import React, { useState, useEffect } from 'react';
-import { Tent, Menu, X, User } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Compass, User, LogOut, Shield, Map, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session.user.id);
+      }
+    });
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session.user.id);
       } else {
-        setIsScrolled(false);
+        setProfile(null);
       }
+    });
 
-      // Determine active section
-      const sections = ['home', 'vendors', 'catalog', 'how-it-works', 'booking', 'testimonials'];
-      const scrollPosition = window.scrollY + 120;
-
-      for (const section of sections) {
-        const el = document.getElementById(section);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveSection(section);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => subscription.unsubscribe();
   }, []);
 
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      const offset = 80; // offset for sticky navbar
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = el.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+  const fetchProfile = async (userId) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (data) {
+      setProfile(data);
     }
-    setIsMobileMenuOpen(false);
   };
 
-  const navLinks = [
-    { name: 'Beranda', id: 'home' },
-    { name: 'Toko Teratas', id: 'vendors' },
-    { name: 'Katalog Alat', id: 'catalog' },
-    { name: 'Cara Kerja', id: 'how-it-works' },
-    { name: 'Sewa Sekarang', id: 'booking' },
-    { name: 'Testimoni', id: 'testimonials' },
-  ];
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+    setIsOpen(false);
+  };
+
+  // Check if we are on the admin page to hide main navbar if necessary
+  const isAdminPage = location.pathname.startsWith('/admin');
+  if (isAdminPage) return null;
 
   return (
-    <>
-      <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled ? 'glass shadow-md py-3' : 'bg-transparent py-5'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => scrollToSection('home')}>
-              <Tent className="w-8 h-8 text-forest-600 animate-float" />
-              <span className="font-display font-bold text-2xl tracking-tight text-forest-800">
-                Siap<span className="text-amber-500">Muncak</span>
-              </span>
-            </div>
+    <nav className="navbar">
+      <div className="container nav-container">
+        <Link to="/" className="nav-logo" onClick={() => setIsOpen(false)}>
+          <Map className="nav-logo-icon" />
+          <span>Siap<span className="accent">-</span>Muncak</span>
+        </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => scrollToSection(link.id)}
-                  className={`font-medium transition-colors relative py-1 text-sm ${
-                    activeSection === link.id ? 'text-forest-600 font-semibold' : 'text-forest-900/80 hover:text-forest-600'
-                  }`}
-                >
-                  {link.name}
-                  {activeSection === link.id && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-amber-500 rounded-full animate-slide-in" />
-                  )}
-                </button>
-              ))}
-            </div>
+        {/* Mobile menu toggle */}
+        <button className="nav-toggle" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
 
-            {/* Desktop Right CTA */}
-            <div className="hidden md:flex items-center gap-4">
-              <button className="text-forest-800 hover:text-forest-600 font-medium text-sm transition-colors flex items-center gap-1.5">
-                <User className="w-4 h-4" /> Masuk
-              </button>
-              <button className="bg-amber-500 hover:bg-amber-600 text-forest-950 font-semibold px-5 py-2.5 rounded-full text-sm shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md animate-pulse-glow">
-                Buka Toko
-              </button>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-forest-800 hover:text-forest-600 p-2 transition-colors"
-                aria-label="Toggle Menu"
+        <ul className={`nav-links ${isOpen ? 'active' : ''}`}>
+          <li>
+            <Link
+              to="/catalog"
+              className={`nav-link ${location.pathname === '/catalog' ? 'active' : ''}`}
+              onClick={() => setIsOpen(false)}
+            >
+              <Compass size={18} />
+              Katalog Alat
+            </Link>
+          </li>
+          
+          {profile?.role === 'admin' && (
+            <li>
+              <Link
+                to="/admin"
+                className="nav-link admin-indicator"
+                onClick={() => setIsOpen(false)}
               >
-                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
-          </div>
-        </div>
+                <Shield size={18} />
+                Admin Panel
+              </Link>
+            </li>
+          )}
 
-        {/* Mobile Slide-in Menu */}
-        <div
-          className={`fixed inset-y-0 right-0 w-64 bg-forest-950 text-white z-50 transform transition-transform duration-300 ease-in-out shadow-2xl p-6 flex flex-col justify-between md:hidden ${
-            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          <div>
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <Tent className="w-6 h-6 text-amber-500" />
-                <span className="font-display font-bold text-lg">SiapMuncak</span>
-              </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 hover:text-white transition-colors">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              {navLinks.map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => scrollToSection(link.id)}
-                  className={`text-left font-medium py-1 transition-colors ${
-                    activeSection === link.id ? 'text-amber-400 font-semibold pl-2 border-l-2 border-amber-500' : 'text-gray-300 hover:text-white'
-                  }`}
+          {session ? (
+            <>
+              <li>
+                <Link
+                  to="/profile"
+                  className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
+                  onClick={() => setIsOpen(false)}
                 >
-                  {link.name}
+                  <User size={18} />
+                  {profile?.full_name || 'Profil Saya'}
+                </Link>
+              </li>
+              <li>
+                <button onClick={handleLogout} className="btn-logout">
+                  <LogOut size={18} />
+                  Keluar
                 </button>
-              ))}
-            </div>
-          </div>
+              </li>
+            </>
+          ) : (
+            <li>
+              <Link
+                to="/auth"
+                className="btn btn-primary btn-sm btn-auth"
+                onClick={() => setIsOpen(false)}
+              >
+                Masuk / Daftar
+              </Link>
+            </li>
+          )}
+        </ul>
+      </div>
 
-          <div className="flex flex-col gap-4 mt-auto">
-            <button className="text-gray-300 hover:text-white font-medium py-2 rounded-lg border border-gray-700 flex items-center justify-center gap-1.5 transition-colors">
-              <User className="w-4 h-4" /> Masuk
-            </button>
-            <button className="bg-amber-500 hover:bg-amber-600 text-forest-950 font-semibold py-2.5 rounded-lg text-center transition-transform hover:scale-[1.02]">
-              Buka Toko
-            </button>
-          </div>
-        </div>
+      <style>{`
+        .navbar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 70px;
+          background: rgba(10, 20, 23, 0.85);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          transition: background 0.3s ease;
+        }
 
-        {/* Mobile Menu Backdrop */}
-        {isMobileMenuOpen && (
-          <div
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm"
-          />
-        )}
-      </nav>
-    </>
+        .nav-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .nav-logo {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-heading);
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: #fff;
+          letter-spacing: -0.5px;
+        }
+
+        .nav-logo-icon {
+          color: var(--color-primary);
+          width: 28px;
+          height: 28px;
+        }
+
+        .nav-logo .accent {
+          color: var(--color-primary);
+        }
+
+        .nav-links {
+          display: flex;
+          align-items: center;
+          list-style: none;
+          gap: 24px;
+        }
+
+        .nav-link {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: var(--color-text-muted);
+          font-weight: 600;
+          font-size: 0.95rem;
+          padding: 8px 12px;
+          border-radius: var(--border-radius-sm);
+        }
+
+        .nav-link:hover, .nav-link.active {
+          color: #fff;
+        }
+
+        .nav-link.active {
+          background-color: rgba(255, 255, 255, 0.04);
+          color: var(--color-primary);
+        }
+
+        .admin-indicator {
+          color: var(--color-warning);
+          border: 1px dashed rgba(245, 158, 11, 0.3);
+        }
+        .admin-indicator:hover {
+          color: #fff;
+          background-color: rgba(245, 158, 11, 0.1);
+        }
+
+        .btn-logout {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: transparent;
+          border: none;
+          color: var(--color-text-muted);
+          font-family: var(--font-sans);
+          font-weight: 600;
+          font-size: 0.95rem;
+          padding: 8px 12px;
+          cursor: pointer;
+          border-radius: var(--border-radius-sm);
+        }
+        .btn-logout:hover {
+          color: var(--color-error);
+          background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        .btn-auth {
+          padding: 8px 18px !important;
+          font-size: 0.9rem !important;
+        }
+
+        .nav-toggle {
+          display: none;
+          background: transparent;
+          border: none;
+          color: #fff;
+          cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+          .nav-toggle {
+            display: block;
+          }
+
+          .nav-links {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: #0A1417;
+            flex-direction: column;
+            padding: 24px;
+            gap: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            transform: translateY(-150%);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+          }
+
+          .nav-links.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+          }
+
+          .nav-link, .btn-logout, .btn-auth {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
+    </nav>
   );
 }
